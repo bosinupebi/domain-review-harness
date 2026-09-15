@@ -1,0 +1,15 @@
+{
+  "domain": "example.com",
+  "checked_at": "2026-01-02T12:00:00Z",
+  "reachable": "true",
+  "score": "84",
+  "risk_level": "low",
+  "hsts": "true",
+  "https": "true",
+  "final_url": "https://example.com",
+  "validation_notes": "Synthetic demonstration data",
+  "csp": "false",
+  "dmarc": "false",
+  "spf": "true",
+  "error": ""
+}

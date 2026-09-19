@@ -142,6 +142,11 @@ fn serve_server(server: Server, root: PathBuf, port: u16) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{
+        io::{Read, Write},
+        net::{TcpListener, TcpStream},
+        time::Duration,
+    };
     #[test]
     fn loads_valid_runs_and_reports_invalid_runs() {
         let temp = tempfile::tempdir().unwrap();
@@ -169,6 +174,37 @@ mod tests {
         let result = runs(temp.path()).unwrap();
         assert_eq!(result["runs"][0]["status"]["state"], "running");
         assert!(result["errors"].as_array().unwrap().is_empty());
+    }
+    #[test]
+    fn background_dashboard_serves_saved_runs() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::create_dir(temp.path().join("run")).unwrap();
+        fs::write(
+            temp.path().join("run/assessment.json"),
+            r#"{"domain":"example.com","checked_at":"2026-09-19T12:00:00Z"}"#,
+        )
+        .unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
+        start(temp.path().to_path_buf(), port).unwrap();
+
+        let mut response = String::new();
+        for _ in 0..20 {
+            if let Ok(mut stream) = TcpStream::connect(("127.0.0.1", port)) {
+                stream
+                    .write_all(
+                        format!("GET /api/runs HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n")
+                            .as_bytes(),
+                    )
+                    .unwrap();
+                stream.read_to_string(&mut response).unwrap();
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+        assert!(response.contains("example.com"));
     }
     #[cfg(unix)]
     #[test]

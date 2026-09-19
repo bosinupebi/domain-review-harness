@@ -2,7 +2,7 @@
 
 ## Authorization
 
-Run this tool only for domains and related infrastructure you own or have explicit permission to review. `--authorized` records your acknowledgement at invocation; it does not verify ownership or enforce a technical allowlist. Library callers are responsible for obtaining the same permission.
+Run this tool only for domains and related infrastructure you own or have explicit permission to review. The one-line `bankai --domain DOMAIN` command records this acknowledgement through the domain argument; the advanced `bankai review` command requires `--authorized`. Neither option verifies ownership or enforces a technical allowlist. Library callers are responsible for obtaining the same permission.
 
 The inherited engine discovers related hosts and follows redirects. It is not restricted to an exact hostname. Do not run it where authorization covers only one URL or excludes the activities below. Shared hosting, CDN services, redirected hosts, and discovered subdomains can have separate owners.
 

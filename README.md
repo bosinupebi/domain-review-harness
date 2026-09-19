@@ -26,26 +26,34 @@ sudo apt-get install build-essential pkg-config dnsutils openssl ca-certificates
 git clone https://github.com/bosinupebi/domain-review-harness.git
 cd domain-review-harness
 cargo build --release --locked
-./target/release/domain-review --help
+cargo install --path . --locked
+bankai --help
 ```
 
 On macOS, install Xcode Command Line Tools (`xcode-select --install`) and Rust. Check `dig -v` and `openssl version`; use `DOMAIN_REVIEW_OPENSSL` if an alternate OpenSSL executable is needed for HTTP fallback.
 
-## Review your domain
+## Review your domain with one command
 
 Replace the placeholder with a domain you control. Confirm that you have permission for all behavior in [scope.md](docs/scope.md), including related hosts and anonymous FTP checks.
 
 ```bash
-./target/release/domain-review review your-company.example \
-  --authorized --output reports/first-review
+bankai --domain your-company.example
 ```
 
-Open `reports/first-review/report.md`, then inspect `assessment.json` and `evidence.jsonl` to verify each finding. The output directory must be new, so a later review cannot silently overwrite the previous one.
+This starts the local dashboard at **http://127.0.0.1:8787**, runs the review, and saves the result in a uniquely named folder under `reports/`. It remains open after the review so you can inspect the live dashboard; press `Ctrl-C` when you are done. Each later command creates another run folder, allowing the dashboard to retain and compare the full local history.
+
+Supplying `--domain` confirms that you are authorized for all behavior in [scope.md](docs/scope.md), including related hosts and anonymous FTP checks. The command does not establish ownership or restrict discovery to a single hostname.
+
+Use `--reports`, `--port`, `--timeout`, and `--retries` when needed:
 
 ```bash
-./target/release/domain-review review your-company.example \
+bankai --domain your-company.example --reports ~/bankai-runs --port 9000
+```
+
+```bash
+bankai review your-company.example \
   --authorized --output reports/second-review
-./target/release/domain-review diff \
+bankai diff \
   --previous reports/first-review/assessment.csv \
   --current reports/second-review/assessment.csv \
   --output reports/changes.jsonl
@@ -53,10 +61,10 @@ Open `reports/first-review/report.md`, then inspect `assessment.json` and `evide
 
 `--timeout 15` sets the timeout per network operation; it is not an overall deadline. A full review can take several minutes or longer. See [CLI and configuration](docs/usage.md), [results reference](docs/results.md), and [troubleshooting](docs/troubleshooting.md).
 
-## Browse results in the dashboard
+## Dashboard and advanced commands
 
 ```bash
-./target/release/domain-review serve --reports reports
+bankai serve --reports reports
 ```
 
 Open **http://127.0.0.1:8787** to browse saved runs, filter findings, inspect evidence, compare runs of the same domain, and export JSON. The dashboard is read-only and runs entirely locally. See [dashboard guide](docs/dashboard.md).
@@ -64,7 +72,7 @@ Open **http://127.0.0.1:8787** to browse saved runs, filter findings, inspect ev
 Try the dashboard with synthetic example runs (no scanning):
 
 ```bash
-./target/release/domain-review serve --reports examples/runs
+bankai serve --reports examples/runs
 ```
 
 ![Dashboard showing synthetic domain review results](docs/images/dashboard.png)

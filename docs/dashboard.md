@@ -3,10 +3,10 @@
 After building, start the dashboard from the repository root:
 
 ```bash
-./target/release/domain-review serve --reports reports --port 8787
+bankai serve --reports reports --port 8787
 ```
 
-Open **http://127.0.0.1:8787** using the exact printed address. The reports directory must exist. For an empty workspace, create it with `mkdir -p reports` first. Stop the server with Ctrl-C.
+`bankai --domain your-company.example` starts this dashboard automatically. Open **http://127.0.0.1:8787** using the exact printed address while the review is running or after it completes. The dashboard refreshes saved runs every 10 seconds. The standalone `serve` command is useful for reopening an existing history. The reports directory must exist for `serve`; create it with `mkdir -p reports` for an empty workspace. Stop either command with Ctrl-C.
 
 ## Review workflow
 
@@ -21,7 +21,7 @@ Evidence links open the target in a new tab and make a normal browser request. R
 
 ## Storage and operation
 
-The server reads immediate child directories containing `assessment.json`, for example `reports/first-review/assessment.json`. It recomputes displayed evidence from each assessment using the current engine. The original `evidence.jsonl` remains the historical export; the dashboard does not read manual edits to that file. Keep the harness version consistent when comparing results.
+The server reads immediate child directories containing `assessment.json`, such as `reports/example-com-20260919T143000Z/assessment.json`. One-line Bankai reviews automatically create and retain these folders. While a review is in progress, its `run.json` status makes it visible as `Running` before results are written; a failed run is retained with its failed status. It recomputes displayed evidence from each completed assessment using the current engine. The original `evidence.jsonl` remains the historical export; the dashboard does not read manual edits to that file. Keep the harness version consistent when comparing results.
 
 Malformed/missing assessments appear as warnings while valid runs remain usable. Files larger than 5 MB and report symlinks outside the reports root are rejected. Nested directories are not recursively discovered. All runs are loaded into memory, so use a focused reports directory for large archives.
 

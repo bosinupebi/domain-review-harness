@@ -1,8 +1,22 @@
 # CLI and configuration
 
-## Commands
+## One-line workflow
 
-`domain-review review DOMAIN --authorized [--output DIRECTORY] [--timeout SECONDS] [--retries COUNT]`
+`bankai --domain DOMAIN [--reports DIRECTORY] [--port PORT] [--timeout SECONDS] [--retries COUNT]`
+
+This is the primary command. It creates the reports directory when necessary, starts the dashboard on loopback before network checks begin, creates a unique `domain-YYYYMMDDTHHMMSSZ` run directory, performs the review, and remains running so the dashboard is available. Open the printed URL, normally `http://127.0.0.1:8787`, and press Ctrl-C when finished. The dashboard refreshes its run list every 10 seconds and can be manually refreshed.
+
+Providing `--domain` is your acknowledgement that you have explicit authorization for the full behavior in [scope.md](scope.md). This command is unsuitable for unattended automation because it intentionally keeps the dashboard process alive after a run. Use `review` below for a scriptable command with an explicit authorization flag.
+
+- DOMAIN accepts a bare hostname or HTTP(S) root URL. Credentials, custom ports, paths, query strings, and fragments are rejected.
+- `--reports` defaults to `reports`. Bankai never overwrites an existing run; every one-line review receives a new timestamped directory.
+- `--port` defaults to 8787. It must be available on `127.0.0.1`; if another program uses it, Bankai stops before starting a review.
+- `--timeout` defaults to 15 seconds, range 1–120, per network operation.
+- `--retries` defaults to 1, range 0–3, per network operation.
+
+## Advanced commands
+
+`bankai review DOMAIN --authorized [--output DIRECTORY] [--timeout SECONDS] [--retries COUNT]`
 
 - DOMAIN accepts a bare hostname or HTTP(S) root URL. Credentials, custom ports, paths, query strings, and fragments are rejected.
 - `--authorized` is required before any review network work.
@@ -10,15 +24,15 @@
 - `--timeout` defaults to 15 seconds, range 1–120, per operation.
 - `--retries` defaults to 1, range 0–3.
 
-`domain-review diff --previous FILE.csv --current FILE.csv --output FILE.jsonl`
+`bankai diff --previous FILE.csv --current FILE.csv --output FILE.jsonl`
 
 Diff is offline. Both inputs must exist and the output must be new. It compares assessment fields and evidence; use CSV files produced by this harness.
 
-`domain-review --help`, `domain-review review --help`, and `domain-review --version` are available without network access.
+`bankai --help`, `bankai review --help`, and `bankai --version` are available without network access.
 
 ## Dashboard
 
-`domain-review serve --reports reports --port 8787` starts the read-only local results UI. See [dashboard guide](dashboard.md).
+`bankai serve --reports reports --port 8787` starts the read-only local results UI without running a review. See [dashboard guide](dashboard.md).
 
 ## Environment
 

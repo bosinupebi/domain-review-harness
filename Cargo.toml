@@ -1,6 +1,6 @@
 [package]
 name = "domain-review-harness"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Free domain security and website trust review harness"
 license = "MIT"
@@ -12,7 +12,7 @@ keywords = ["security", "domain", "audit", "self-hosted"]
 path = "src/lib.rs"
 
 [[bin]]
-name = "domain-review"
+name = "bankai"
 path = "src/main.rs"
 
 [dependencies]

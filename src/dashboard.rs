@@ -1,7 +1,11 @@
 //! Read-only loopback dashboard for local reports.
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    thread,
+};
 use tiny_http::{Header, Method, Response, Server};
 
 pub fn runs(root: &Path) -> Result<Value> {
@@ -16,8 +20,27 @@ pub fn runs(root: &Path) -> Result<Value> {
             continue;
         }
         let id = entry.file_name().to_string_lossy().to_string();
+        let assessment_path = entry.path().join("assessment.json");
+        if !assessment_path.exists() {
+            let status_path = entry.path().join("run.json");
+            match fs::read(&status_path)
+                .context("read run status")
+                .and_then(|bytes| {
+                    serde_json::from_slice::<Value>(&bytes).context("parse run status")
+                }) {
+                Ok(status) => {
+                    let assessment = json!({
+                        "domain": status["domain"],
+                        "checked_at": status["started_at"],
+                    });
+                    runs.push(json!({"id": id, "status": status, "assessment": assessment, "evidence": []}));
+                }
+                Err(error) => errors.push(json!({"id": id, "error": error.to_string()})),
+            }
+            continue;
+        }
         let read = || -> Result<Value> {
-            let file = entry.path().join("assessment.json").canonicalize()?;
+            let file = assessment_path.canonicalize()?;
             ensure!(
                 file.starts_with(&root),
                 "report symlink escapes reports directory"
@@ -28,7 +51,10 @@ pub fn runs(root: &Path) -> Result<Value> {
             );
             let assessment: crate::Row = serde_json::from_slice(&fs::read(file)?)?;
             let evidence = crate::evidence::records(&assessment);
-            Ok(json!({"id": id, "assessment": assessment, "evidence": evidence}))
+            let status = fs::read(entry.path().join("run.json"))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
+            Ok(json!({"id": id, "status": status, "assessment": assessment, "evidence": evidence}))
         };
         match read() {
             Ok(run) => runs.push(run),
@@ -42,12 +68,29 @@ pub fn runs(root: &Path) -> Result<Value> {
     });
     Ok(json!({"runs": runs, "errors": errors}))
 }
+pub fn start(root: PathBuf, port: u16) -> Result<()> {
+    ensure!(
+        root.is_dir(),
+        "reports directory must exist; run a review first or create the directory"
+    );
+    let server = Server::http(("127.0.0.1", port)).map_err(|e| anyhow::anyhow!("{e}"))?;
+    thread::Builder::new()
+        .name("bankai-dashboard".into())
+        .spawn(move || serve_server(server, root, port))
+        .context("start dashboard thread")?;
+    Ok(())
+}
+
 pub fn serve(root: &Path, port: u16) -> Result<()> {
     ensure!(
         root.is_dir(),
         "reports directory must exist; run a review first or create the directory"
     );
     let server = Server::http(("127.0.0.1", port)).map_err(|e| anyhow::anyhow!("{e}"))?;
+    serve_server(server, root.to_path_buf(), port)
+}
+
+fn serve_server(server: Server, root: PathBuf, port: u16) -> Result<()> {
     let expected_host = format!("127.0.0.1:{port}");
     eprintln!("Dashboard: http://{expected_host} (Ctrl-C to stop)");
     for request in server.incoming_requests() {
@@ -76,7 +119,7 @@ pub fn serve(root: &Path, port: u16) -> Result<()> {
                     "text/css; charset=utf-8",
                     include_str!("../ui/style.css").to_string(),
                 ),
-                "/api/runs" => match runs(root) {
+                "/api/runs" => match runs(&root) {
                     Ok(data) => (200, "application/json", data.to_string()),
                     Err(e) => (
                         500,
@@ -113,6 +156,19 @@ mod tests {
         let result = runs(temp.path()).unwrap();
         assert_eq!(result["runs"].as_array().unwrap().len(), 1);
         assert_eq!(result["errors"].as_array().unwrap().len(), 1);
+    }
+    #[test]
+    fn exposes_a_running_run_without_treating_it_as_an_error() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::create_dir(temp.path().join("running")).unwrap();
+        fs::write(
+            temp.path().join("running/run.json"),
+            r#"{"domain":"example.com","started_at":"2026-09-19T12:00:00Z","state":"running"}"#,
+        )
+        .unwrap();
+        let result = runs(temp.path()).unwrap();
+        assert_eq!(result["runs"][0]["status"]["state"], "running");
+        assert!(result["errors"].as_array().unwrap().is_empty());
     }
     #[cfg(unix)]
     #[test]

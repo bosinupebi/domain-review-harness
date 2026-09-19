@@ -4,7 +4,7 @@ This repository extracts the reusable Rust assessment engine from Kintsubyte's p
 
 ## Components
 
-- `src/main.rs`: standalone CLI, target validation, report writing, offline diff.
+- `src/main.rs`: the `bankai --domain DOMAIN` workflow, target validation, retained run-state metadata, report writing, and offline diff.
 - `src/assessment.rs`: network checks, DNS/TLS, browser fallback, active discovery.
 - `src/public_checks.rs` and `src/deep_validation.rs`: response parsing and detection helpers.
 - `src/findings.rs`: severity classification and prioritization, extracted from the original brief-generation module; email generation removed.
@@ -21,4 +21,4 @@ Add parsing logic with synthetic fixtures, connect it to the assessment pipeline
 
 ## Dashboard
 
-`src/dashboard.rs` serves embedded assets from `ui/` on loopback. The UI reads `/api/runs` and renders reports with text-safe DOM APIs. See [dashboard.md](dashboard.md) for storage and operational limits.
+`src/dashboard.rs` serves embedded assets from `ui/` on loopback. The UI reads `/api/runs` and renders reports with text-safe DOM APIs. The one-line workflow starts it on a dedicated thread before assessment begins. Each retained run has `run.json` with its `running`, `complete`, or `failed` state; an assessment is added when available. See [dashboard.md](dashboard.md) for storage and operational limits.

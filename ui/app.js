@@ -7,7 +7,8 @@ function renderRuns() {
   const query = $('search').value.toLowerCase(); $('runs').replaceChildren();
   for (const run of runs.filter(r => `${r.id} ${r.assessment.domain}`.toLowerCase().includes(query))) {
     const button = make('button', undefined, selected?.id === run.id ? 'active' : '');
-    button.append(make('strong', run.assessment.domain || run.id), make('small', `${run.id} · ${date(run.assessment.checked_at)}`));
+    const state = run.status?.state ? ` · ${run.status.state}` : '';
+    button.append(make('strong', run.assessment.domain || run.id), make('small', `${run.id} · ${date(run.assessment.checked_at)}${state}`));
     button.onclick = () => selectRun(run); $('runs').append(button);
   }
   if (!$('runs').children.length && runs.length) $('runs').append(make('p', 'No matching runs.'));
@@ -19,7 +20,9 @@ function selectRun(run) {
   $('score').textContent = a.score ? `${a.score} / 100` : '—'; $('risk').textContent = a.risk_level || 'Unknown';
   $('finding-count').textContent = run.evidence.length;
   const uncertain = a.error || /verification|challenge|unknown/i.test(a.validation_notes || '') || a.reachable !== 'true';
-  $('status').textContent = uncertain ? 'Needs review' : 'Recorded'; $('checked').textContent = uncertain ? 'Check errors and reachability fields' : 'Verify findings with your team';
+  if (run.status?.state === 'running') { $('status').textContent = 'Running'; $('checked').textContent = 'Refreshes automatically while checks complete'; }
+  else if (run.status?.state === 'failed') { $('status').textContent = 'Failed'; $('checked').textContent = 'Review the terminal error, then rerun with a new command'; }
+  else { $('status').textContent = uncertain ? 'Needs review' : 'Recorded'; $('checked').textContent = uncertain ? 'Check errors and reachability fields' : 'Verify findings with your team'; }
   $('baseline').replaceChildren();
   for (const other of runs.filter(r => r.id !== run.id && r.assessment.domain === a.domain)) { const option = make('option', `${other.id} · ${date(other.assessment.checked_at)}`); option.value = other.id; $('baseline').append(option); }
   renderFindings(); renderFields(); renderComparison();
@@ -66,3 +69,4 @@ $('search').oninput = renderRuns; $('refresh').onclick = refresh; $('severity').
 for (const button of document.querySelectorAll('[data-tab]')) button.onclick = () => { for (const tab of document.querySelectorAll('[data-tab]')) { const active = tab === button; tab.classList.toggle('active',active); $(tab.dataset.tab).hidden = !active; } };
 $('download').onclick = () => { if (!selected) return; const url = URL.createObjectURL(new Blob([JSON.stringify(selected.assessment,null,2)],{type:'application/json'})); const a = make('a'); a.href = url; a.download = 'assessment.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000); };
 refresh();
+window.setInterval(refresh, 10_000);

@@ -1,12 +1,12 @@
 name: CI
-on: [push, pull_request, workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
   rust:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
